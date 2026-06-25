@@ -38,12 +38,142 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
         if (ctx.Boole() != null) return "bool";
         return "int";
     }
+    @Override
+    public String visitEquality(HashParser.EqualityContext ctx) {
+        String result = visit(ctx.relational(0));
+
+        for (int i = 1; i < ctx.relational().size(); i++) {
+            String op = ctx.getChild(2 * i - 1).getText();
+            result += " " + op + " " + visit(ctx.relational(i));
+        }
+
+        return result;
+    }
 
 
     @Override
-    public String visitExp(HashParser.ExpContext ctx) {
-        return visitChildren(ctx);
+    public String visitLogicalAnd(HashParser.LogicalAndContext ctx) {
+
+        StringBuilder sb = new StringBuilder();
+
+        sb.append(visit(ctx.equality(0)));
+
+        for (int i = 1; i < ctx.equality().size(); i++) {
+            String op = ctx.getChild(2 * i - 1).getText();
+            sb.append(" ").append(op).append(" ");
+            sb.append(visit(ctx.equality(i)));
+        }
+
+        return sb.toString();
     }
+    @Override
+    public String visitLogicalOr(HashParser.LogicalOrContext ctx) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(visit(ctx.logicalAnd(0)));
+        for (int i = 1; i < ctx.logicalAnd().size(); i++) {
+            String op = ctx.getChild(2 * i - 1).getText();
+            sb.append(" ").append(op).append(" ");
+            sb.append(visit(ctx.logicalAnd(i)));
+        }
+
+      return sb.toString();
+    }
+    @Override
+    public String visitAdditive(HashParser.AdditiveContext ctx) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(visit(ctx.multiplicative(0)));
+        for (int i = 1; i < ctx.multiplicative().size(); i++) {
+            String op = ctx.getChild(2 * i - 1).getText();
+            sb.append(" ").append(op).append(" ");
+            sb.append(visit(ctx.multiplicative(i)));
+        }
+        return sb.toString(); }
+    public String visitMultiplicative(HashParser.MultiplicativeContext ctx) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(visit(ctx.power(0)));
+        for (int i = 1; i < ctx.power().size(); i++) {
+            String op = ctx.getChild(2 * i - 1).getText();
+            sb.append(" ").append(op).append(" ");
+            sb.append(visit(ctx.power(i)));
+        }
+
+
+    return sb.toString();}
+    @Override
+    public String visitPower(HashParser.PowerContext ctx) {
+        if (ctx.power() == null) {
+            return visit(ctx.unary());
+        }
+
+        String baseExpr = visit(ctx.unary());
+
+        int exponent = evalConstPower(ctx.power());
+
+        if (exponent < 0) {
+            throw new RuntimeException("Negative exponent is not supported in Promela");
+        }
+
+        if (exponent == 0) {
+            return "1";
+        }
+
+        if (exponent == 1) {
+            return baseExpr;
+        }
+
+        StringBuilder sb = new StringBuilder("(");
+        for (int i = 0; i < exponent; i++) {
+            if (i > 0) {
+                sb.append(" * ");
+            }
+            sb.append(baseExpr);
+        }
+        sb.append(")");
+
+        return sb.toString();
+    }
+
+    private int evalConstPower(HashParser.PowerContext ctx) {
+        int base = evalConstUnary(ctx.unary());
+
+        if (ctx.power() == null) {
+            return base;
+        }
+
+        int exponent = evalConstPower(ctx.power());
+
+        if (exponent < 0) {
+            throw new RuntimeException("Negative exponent is not supported in constant power expression");
+        }
+
+        return intPow(base, exponent);
+    }
+
+    private int evalConstUnary(HashParser.UnaryContext ctx) {
+        String text = ctx.getText();
+
+        if (text.matches("\\d+")) {
+            return Integer.parseInt(text);
+        }
+
+        if (text.matches("-\\d+")) {
+            return Integer.parseInt(text);
+        }
+
+        throw new RuntimeException("Power exponent must be a constant integer, but got: " + text);
+    }
+
+    private int intPow(int base, int exponent) {
+        int result = 1;
+
+        for (int i = 0; i < exponent; i++) {
+            result *= base;
+        }
+
+        return result;
+    }
+
+
 
 
     @Override
