@@ -1,5 +1,10 @@
-public class HashToPromelaVisitor extends HashBaseVisitor<String> {
+import java.util.HashMap;
 
+import java.util.Stack;
+
+public class HashToPromelaVisitor extends HashBaseVisitor<String> {
+    private Stack<LoopLabel> loopStack = new Stack<>();
+    private int loopCounter = 0;
     @Override
     public String visitProgram(HashParser.ProgramContext ctx) {
         StringBuilder out = new StringBuilder();
@@ -17,7 +22,127 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
         if (ctx.varDecl() != null) return visit(ctx.varDecl()) ;
         if (ctx.functionDecl() != null) return visit(ctx.functionDecl());
         if (ctx.klassDecl() != null) return visit(ctx.klassDecl());
+        if(ctx.stmt() != null) return visit(ctx.stmt());
         return "";
+    }
+
+    @Override
+    public String visitStmt(HashParser.StmtContext ctx) {
+        if(ctx.loopStmt() != null){
+            return visit(ctx.loopStmt());
+        }
+        if(ctx.ifStmt() != null){
+            return visit(ctx.ifStmt());
+        }
+        if(ctx.exp() != null){
+            return visit(ctx.exp());
+        }
+        if(ctx.varDecl() != null){
+            return visit(ctx.varDecl());
+        }
+        if(ctx.breakStmt() != null){
+            return visit(ctx.breakStmt());
+        }
+        if(ctx.continueStmt() != null){
+            return visit(ctx.continueStmt());
+        }
+
+
+        return "";
+    }
+
+    @Override
+    public String visitBreakStmt(HashParser.BreakStmtContext ctx) {
+
+        if (loopStack.isEmpty()) {
+            throw new RuntimeException("break outside loop");
+        }
+
+
+        return  "break;\n";
+    }
+
+    @Override
+    public String visitContinueStmt(HashParser.ContinueStmtContext ctx) {
+
+        if (loopStack.isEmpty()) {
+            throw new RuntimeException("continue outside loop");
+        }
+
+        return "goto " + loopStack.peek().start + ";\n";
+    }
+
+    @Override
+    public String visitLoopStmt(HashParser.LoopStmtContext ctx) {
+
+        if (ctx.whileStmt() != null) {
+            return visit(ctx.whileStmt());
+        }
+
+        if (ctx.forStmt() != null) {
+            return visit(ctx.forStmt());
+        }
+
+        return "";
+    }
+    @Override
+    public String visitWhileStmt(HashParser.WhileStmtContext ctx) {
+
+        String cond = visit(ctx.exp());
+
+
+        int id = loopCounter++;
+
+        String startLabel = "L" + id + "_start";
+
+
+
+        loopStack.push(new LoopLabel(startLabel));
+
+
+        StringBuilder body = new StringBuilder();
+        for (var s : ctx.stmt()) {
+            body.append(visit(s)).append("\n");
+        }
+
+        loopStack.pop();
+        return startLabel + ":\n" +
+                "do\n" +
+                ":: (" + cond + ") -> \n" +
+                body +
+                "\n" +
+                ":: else -> break  \n" +
+                "od;\n"  ;
+
+    }
+    @Override
+    public String visitForStmt(HashParser.ForStmtContext ctx) {
+
+        String init = "";
+        if (ctx.varDecl() != null) {
+            init = visit(ctx.varDecl());
+        } else if (ctx.exp(0) != null) {
+            init = visit(ctx.exp(0)) + ";\n";
+        }
+
+        String cond = ctx.exp().size() > 0 ? visit(ctx.exp(0)) : "true";
+
+        String update = ctx.exp().size() > 1 ? visit(ctx.exp(1)) : "";
+
+        StringBuilder body = new StringBuilder();
+
+        for (var s : ctx.stmt()) {
+            body.append(visit(s)).append("\n");
+        }
+
+        return init +
+                "do\n" +
+                ":: (" + cond + ") -> {\n" +
+                body +
+                update + ";\n" +
+                "}\n" +
+                ":: else -> break\n" +
+                "od;\n";
     }
 
     @Override
@@ -193,3 +318,10 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
 
 
     }
+class LoopLabel {
+    String start;
+
+    LoopLabel(String start) {
+        this.start = start;
+    }
+}
