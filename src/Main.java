@@ -9,7 +9,6 @@ public class Main {
         String inputFile = "C:\\Users\\XMART\\IdeaProjects\\modelcheking\\src\\input";
         String outputFile = "output.pml";
 
-
         try {
             // ۲. خواندن فایل و ایجاد جریان کاراکتر
             CharStream input = CharStreams.fromFileName(inputFile);

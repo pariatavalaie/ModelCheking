@@ -8,28 +8,52 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     private String currentError = null;
     private Stack<LoopLabel> loopStack = new Stack<>();
     private int loopCounter = 0;
+    StringBuilder mainProcess = new StringBuilder();
+
 
     @Override
     public String visitProgram(HashParser.ProgramContext ctx) {
-        StringBuilder out = new StringBuilder();
-        if (ctx.children != null) {
-            for (var child : ctx.children) {
-                String result = visit(child);
-                if (result != null) out.append(result);
-            }
+
+        StringBuilder result = new StringBuilder();
+
+        for (var d : ctx.topLevelDecl()) {
+            result.append(visit(d));
         }
-        return out.toString();
+
+        result.append("\nproctype main() {\n");
+        result.append(mainProcess);
+        result.append("}\n");
+
+
+
+        return result.toString();
     }
+
 
 
     @Override
     public String visitTopLevelDecl(HashParser.TopLevelDeclContext ctx) {
-        if (ctx.varDecl() != null) return visit(ctx.varDecl())+";\n" ;
-        if (ctx.functionDecl() != null) return visit(ctx.functionDecl());
-        if (ctx.klassDecl() != null) return visit(ctx.klassDecl());
-        if(ctx.stmt() != null) return visit(ctx.stmt());
+
+        if (ctx.varDecl() != null) {
+            return visit(ctx.varDecl()) + ";\n";
+        }
+
+        if (ctx.functionDecl() != null) {
+            return visit(ctx.functionDecl());
+        }
+
+        if (ctx.klassDecl() != null) {
+            return visit(ctx.klassDecl());
+        }
+
+        if (ctx.stmt() != null) {
+            mainProcess.append(visit(ctx.stmt())).append("\n");
+            return "";
+        }
+
         return "";
     }
+
 
     @Override
     public String visitVarDecl(HashParser.VarDeclContext ctx) {
@@ -501,32 +525,46 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
                 body +
                 "\n" +
                 ":: else -> break  \n" +
-                "od;\n"  ;
+                "od\n"  ;
 
     }
     @Override
     public String visitForStmt(HashParser.ForStmtContext ctx) {
 
         String init = "";
+        int id = loopCounter++;
+        int expIndex = 0;
+        String startLabel = "L" + id + "_start";
+        loopStack.push(new LoopLabel(startLabel));
         if (ctx.varDecl() != null) {
             init = visit(ctx.varDecl());
         } else if (ctx.exp(0) != null) {
             init = visit(ctx.exp(0)) + ";\n";
+            expIndex++;
         }
-        String cond = ctx.exp().size() > 0 ? visit(ctx.exp(0)) : "true";
-        String update = ctx.exp().size() > 1 ? visit(ctx.exp(1)) : "";
+        String cond="" ;
+        if (ctx.exp(expIndex)!=null) {
+            cond = visit(ctx.exp(expIndex));
+            expIndex++;
+        }
+        String update="";
+
         StringBuilder body = new StringBuilder();
         for (var s : ctx.stmt()) {
             body.append(visit(s)).append("\n");
         }
-        return init +
+        if (ctx.exp(expIndex)!=null) {
+           update= visit(ctx.exp(expIndex));
+        }
+        loopStack.pop();
+        return init +startLabel+":\n" +
                 "do\n" +
                 ":: (" + cond + ") -> \n" +
                 body +
                 update + ";\n" +
                 "\n" +
                 ":: else -> break\n" +
-                "od;\n";
+                "od\n";
     }
     @Override
     public String visitIfStmt(HashParser.IfStmtContext ctx) {
