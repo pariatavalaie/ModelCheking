@@ -1,3 +1,1 @@
-adad x = 5+3*3+4**4*2;
-boole b = dorost;
-boole b = b && b ||x&&f;
+adad x = 5+3*3+4**(1+2**3);
