@@ -437,7 +437,6 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
 
         if (totalVagarna > elseIfCount) {
             sb.append("  :: else -> ");
-            // باقی‌مانده دستورات (stmt*) متعلق به بلاک else هستند
             for (int k = stmtCounter; k < ctx.stmt().size(); k++) {
                 sb.append("\n      ").append(visit(ctx.stmt(k)));
             }
