@@ -23,6 +23,7 @@ public class Main {
             // ۵. شروع پارس کردن از قاعده اصلی (program)
             ParseTree tree = parser.program();
 
+
             // ۶. اگر خطای سینتکسی وجود داشت، ادامه ندهیم
             if (parser.getNumberOfSyntaxErrors() > 0) {
                 System.err.println("❌ خطای نحوی (Syntax Error) در کد ورودی پیدا شد.");
