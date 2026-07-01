@@ -8,7 +8,9 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     private String currentError = null;
     private Stack<LoopLabel> loopStack = new Stack<>();
     private int loopCounter = 0;
+    boolean powerUsed = false;
     StringBuilder mainProcess = new StringBuilder();
+
 
 
     @Override
@@ -23,6 +25,22 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
         result.append("\nproctype main() {\n");
         result.append(mainProcess);
         result.append("}\n");
+        if (powerUsed) {
+            result.append(
+                 "inline power(base, exp) {\n" +
+                         "    int result = 1;\n" +
+                         "    int i = 0;\n" +
+                         "\n" +
+                         "    do\n" +
+                         "    :: (i < exp) ->\n" +
+                         "        result = result * base;\n" +
+                         "        i++\n" +
+                         "    :: else ->\n" +
+                         "        break\n" +
+                         "    od\n" +
+                         "}"
+            );
+        }
 
 
 
@@ -85,6 +103,11 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
             } else if (value.equals("ghalat")) {
                 return "false";
             }
+
+
+        }
+        if (ctx.exp() != null) {
+            return "(" + visit(ctx.exp()) + ")";
         }
         if (ctx.ID() != null) return ctx.ID().getText();
         return "";
@@ -156,200 +179,19 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     @Override
     public String visitPower(HashParser.PowerContext ctx) {
 
-        String base = visit(ctx.unary());
-
         if (ctx.power() == null) {
-            return base;
+            return visit(ctx.unary());
         }
 
-        int exponent = evalConstPower(ctx.power());
+        powerUsed = true;
 
-        if (exponent < 0) {
-            throw new RuntimeException("Negative exponent not supported");
-        }
+        String base = visit(ctx.unary());
+        String exp  = visit(ctx.power());
 
-        if (exponent == 0) {
-            return "1";
-        }
-
-        if (exponent == 1) {
-            return base;
-        }
-
-        StringBuilder sb = new StringBuilder("(");
-
-        for (int i = 0; i < exponent; i++) {
-            if (i > 0) sb.append(" * ");
-            sb.append(base);
-        }
-
-        sb.append(")");
-
-        return sb.toString();
-    }
-    private int evalConstExp(HashParser.ExpContext ctx) {
-        return evalConstAssign(ctx.assign());
+        return "power(" + base + ", " + exp + ")";
     }
 
-    private int evalConstAssign(HashParser.AssignContext ctx) {
 
-        if (ctx.assign() != null)
-            throw new RuntimeException("Assignment not allowed in constant expression");
-
-        return evalConstLogicalOr(ctx.logicalOr());
-    }
-
-    private int evalConstLogicalOr(HashParser.LogicalOrContext ctx) {
-
-        int result = evalConstLogicalAnd(ctx.logicalAnd(0));
-
-        for (int i = 1; i < ctx.logicalAnd().size(); i++) {
-            int right = evalConstLogicalAnd(ctx.logicalAnd(i));
-            result = ((result != 0) || (right != 0)) ? 1 : 0;
-        }
-
-        return result;
-    }
-
-    private int evalConstLogicalAnd(HashParser.LogicalAndContext ctx) {
-
-        int result = evalConstEquality(ctx.equality(0));
-
-        for (int i = 1; i < ctx.equality().size(); i++) {
-            int right = evalConstEquality(ctx.equality(i));
-            result = ((result != 0) && (right != 0)) ? 1 : 0;
-        }
-
-        return result;
-    }
-
-    private int evalConstEquality(HashParser.EqualityContext ctx) {
-
-        int result = evalConstRelational(ctx.relational(0));
-
-        for (int i = 1; i < ctx.relational().size(); i++) {
-
-            String op = ctx.getChild(2 * i - 1).getText();
-            int right = evalConstRelational(ctx.relational(i));
-
-            switch (op) {
-                case "==": result = (result == right) ? 1 : 0; break;
-                case "!=": result = (result != right) ? 1 : 0; break;
-            }
-        }
-
-        return result;
-    }
-
-    private int evalConstRelational(HashParser.RelationalContext ctx) {
-
-        int result = evalConstAdditive(ctx.additive(0));
-
-        for (int i = 1; i < ctx.additive().size(); i++) {
-
-            String op = ctx.getChild(2 * i - 1).getText();
-            int right = evalConstAdditive(ctx.additive(i));
-
-            switch (op) {
-                case "<":  result = (result < right)  ? 1 : 0; break;
-                case ">":  result = (result > right)  ? 1 : 0; break;
-                case "<=": result = (result <= right) ? 1 : 0; break;
-                case ">=": result = (result >= right) ? 1 : 0; break;
-            }
-        }
-
-        return result;
-    }
-
-    private int evalConstAdditive(HashParser.AdditiveContext ctx) {
-
-        int result = evalConstMultiplicative(ctx.multiplicative(0));
-
-        for (int i = 1; i < ctx.multiplicative().size(); i++) {
-
-            String op = ctx.getChild(2 * i - 1).getText();
-            int right = evalConstMultiplicative(ctx.multiplicative(i));
-
-            if (op.equals("+")) result += right;
-            else result -= right;
-        }
-
-        return result;
-    }
-
-    private int evalConstMultiplicative(HashParser.MultiplicativeContext ctx) {
-
-        int result = evalConstPower(ctx.power(0));
-
-        for (int i = 1; i < ctx.power().size(); i++) {
-
-            String op = ctx.getChild(2 * i - 1).getText();
-            int right = evalConstPower(ctx.power(i));
-
-            switch (op) {
-                case "*": result *= right; break;
-                case "/": result /= right; break;
-                case "%": result %= right; break;
-            }
-        }
-
-        return result;
-    }
-
-    private int evalConstPower(HashParser.PowerContext ctx) {
-
-        int base = evalConstUnary(ctx.unary());
-
-        if (ctx.power() == null)
-            return base;
-
-        int exponent = evalConstPower(ctx.power());
-
-        return intPow(base, exponent);
-    }
-
-    private int evalConstUnary(HashParser.UnaryContext ctx) {
-
-        if (ctx.getChildCount() == 2) {
-
-            String op = ctx.getChild(0).getText();
-            int val = evalConstUnary(ctx.unary());
-
-            if (op.equals("+")) return val;
-            if (op.equals("-")) return -val;
-            if (op.equals("!")) return (val == 0) ? 1 : 0;
-        }
-
-        return evalConstPostfix(ctx.postfix());
-    }
-
-    private int evalConstPostfix(HashParser.PostfixContext ctx) {
-        return evalConstPrimary(ctx.primary());
-    }
-
-    private int evalConstPrimary(HashParser.PrimaryContext ctx) {
-
-        if (ctx.Adad_Literal() != null)
-            return Integer.parseInt(ctx.Adad_Literal().getText());
-
-        if (ctx.Boole_Literal() != null)
-            return ctx.Boole_Literal().getText().equals("true") ? 1 : 0;
-
-        if (ctx.exp() != null)
-            return evalConstExp(ctx.exp());
-
-        throw new RuntimeException("Exponent must be constant: " + ctx.getText());
-    }
-
-    private int intPow(int base, int exponent) {
-
-        int result = 1;
-
-        for (int i = 0; i < exponent; i++)
-            result *= base;
-
-        return result;
-    }
 
 
     @Override
