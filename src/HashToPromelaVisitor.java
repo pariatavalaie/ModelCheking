@@ -12,9 +12,6 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     @Override
     public String visitProgram(HashParser.ProgramContext ctx) {
         StringBuilder out = new StringBuilder();
-        // اضافه کردن هدر برای اینکه خروجی خالی نباشد
-        out.append("// --- Promela Output ---\n");
-
         if (ctx.children != null) {
             for (var child : ctx.children) {
                 String result = visit(child);
@@ -24,10 +21,10 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
         return out.toString();
     }
 
-    // این خیلی مهم است: هدایت از topLevelDecl به سمت varDecl یا functionDecl
+
     @Override
     public String visitTopLevelDecl(HashParser.TopLevelDeclContext ctx) {
-        if (ctx.varDecl() != null) return visit(ctx.varDecl()) ;
+        if (ctx.varDecl() != null) return visit(ctx.varDecl())+";\n" ;
         if (ctx.functionDecl() != null) return visit(ctx.functionDecl());
         if (ctx.klassDecl() != null) return visit(ctx.klassDecl());
         if(ctx.stmt() != null) return visit(ctx.stmt());
@@ -362,19 +359,10 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     }
     @Override
     public String visitWhileStmt(HashParser.WhileStmtContext ctx) {
-
         String cond = visit(ctx.exp());
-
-
         int id = loopCounter++;
-
         String startLabel = "L" + id + "_start";
-
-
-
         loopStack.push(new LoopLabel(startLabel));
-
-
         StringBuilder body = new StringBuilder();
         for (var s : ctx.stmt()) {
             body.append(visit(s)).append("\n");
@@ -399,28 +387,22 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
         } else if (ctx.exp(0) != null) {
             init = visit(ctx.exp(0)) + ";\n";
         }
-
         String cond = ctx.exp().size() > 0 ? visit(ctx.exp(0)) : "true";
-
         String update = ctx.exp().size() > 1 ? visit(ctx.exp(1)) : "";
-
         StringBuilder body = new StringBuilder();
-
         for (var s : ctx.stmt()) {
             body.append(visit(s)).append("\n");
         }
-
         return init +
                 "do\n" +
-                ":: (" + cond + ") -> {\n" +
+                ":: (" + cond + ") -> \n" +
                 body +
                 update + ";\n" +
-                "}\n" +
+                "\n" +
                 ":: else -> break\n" +
                 "od;\n";
     }
 
-    // متدهای کمکی برای جلوگیری از نال در سطوح بالاتر
     @Override
     protected String aggregateResult(String aggregate, String nextResult) {
         if (aggregate == null) return nextResult;
