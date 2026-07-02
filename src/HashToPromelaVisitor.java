@@ -33,6 +33,7 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
                         "    od\n" +
                         "}\n\n"
         );
+        result.append("bool divByZero = false;\n");
 
         for (var d : ctx.topLevelDecl()) {
             result.append(visit(d));
@@ -40,6 +41,7 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
 
 
         result.append("proctype main() {\n");
+
 
 
         result.append(declarations);
@@ -177,17 +179,48 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
             sb.append(visit(ctx.multiplicative(i)));
         }
         return sb.toString(); }
+    @Override
     public String visitMultiplicative(HashParser.MultiplicativeContext ctx) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(visit(ctx.power(0)));
+        String current = visit(ctx.power(0));
+
         for (int i = 1; i < ctx.power().size(); i++) {
             String op = ctx.getChild(2 * i - 1).getText();
-            sb.append(" ").append(op).append(" ");
-            sb.append(visit(ctx.power(i)));
+            String right = visit(ctx.power(i));
+
+            if (op.equals("/")) {
+                String tmp = "tmp_div_" + (tempCounter++);
+                declarations.append("int ").append(tmp).append(";\n");
+
+                mainProcess.append("if\n");
+                mainProcess.append(":: (").append(right).append(" == 0) ->\n");
+                mainProcess.append("    divByZero = true;\n");
+                mainProcess.append(":: else ->\n");
+                mainProcess.append("    ").append(tmp).append(" = ")
+                        .append(current).append(" / ").append(right).append(";\n");
+                mainProcess.append("fi;\n");
+
+                current = tmp;
+            } else if (op.equals("%")) {
+                String tmp = "tmp_mod_" + (tempCounter++);
+                declarations.append("int ").append(tmp).append(";\n");
+
+                mainProcess.append("if\n");
+                mainProcess.append(":: (").append(right).append(" == 0) ->\n");
+                mainProcess.append("    divByZero = true;\n");
+                mainProcess.append(":: else ->\n");
+                mainProcess.append("    ").append(tmp).append(" = ")
+                        .append(current).append(" % ").append(right).append(";\n");
+                mainProcess.append("fi;\n");
+
+                current = tmp;
+            } else {
+                current = current + " " + op + " " + right;
+            }
         }
 
+        return current;
+    }
 
-        return sb.toString();}
     @Override
     public String visitPower(HashParser.PowerContext ctx) {
 
@@ -236,10 +269,16 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
             case "*=":
                 return left + " = " + left + " * " + right;
             case "/=":
-                return left + " = " + left + " / " + right;
+                return "if\n" +
+                        ":: (" + right + " == 0) ->\n" +
+                        "    divByZero = true;\n" +
+                        ":: else ->\n" +
+                        "    " + left + " = " + left + " / " + right + ";\n" +
+                        "fi";
             default:
                 return left + " = " + right;
         }
+
     }
     @Override
     public String visitEquality(HashParser.EqualityContext ctx) {

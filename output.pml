@@ -11,16 +11,20 @@ inline power(base, exp, result) {
     od
 }
 
+bool divByZero = false;
 proctype main() {
-int tmp0;
-int tmp1;
-power(2, 3, tmp0);
-power(4, (1 + tmp0), tmp1);
+int tmp_div_0;
+if
+:: (0 == 0) ->
+    divByZero = true;
+:: else ->
+    tmp_div_0 = 5 / 0;
+fi;
 int i = 2;
 L0_start:
 do
 :: (i < 2) -> 
-int x = 5 + 3 * 3 + tmp1;
+int x = tmp_div_0;
 
 i++;
 
@@ -32,3 +36,4 @@ od
 init {
     run main();
 }
+ltl noDivZero { [](!divByZero) }
