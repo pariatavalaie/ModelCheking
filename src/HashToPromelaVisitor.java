@@ -9,43 +9,55 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     private Stack<LoopLabel> loopStack = new Stack<>();
     private int loopCounter = 0;
     boolean powerUsed = false;
-    StringBuilder mainProcess = new StringBuilder();
-
-
+    private int tempCounter = 0;
+    private StringBuilder declarations = new StringBuilder();
+    private StringBuilder mainProcess = new StringBuilder();
 
     @Override
     public String visitProgram(HashParser.ProgramContext ctx) {
 
         StringBuilder result = new StringBuilder();
 
+        // inline power
+        result.append(
+                "inline power(base, exp, result) {\n" +
+                        "    int i;\n" +
+                        "    result = 1;\n" +
+                        "    i = 0;\n" +
+                        "\n" +
+                        "    do\n" +
+                        "    :: (i < exp) ->\n" +
+                        "        result = result * base;\n" +
+                        "        i++\n" +
+                        "    :: else -> break\n" +
+                        "    od\n" +
+                        "}\n\n"
+        );
+
         for (var d : ctx.topLevelDecl()) {
             result.append(visit(d));
         }
 
-        result.append("\nproctype main() {\n");
+
+        result.append("proctype main() {\n");
+
+
+        result.append(declarations);
+
+
         result.append(mainProcess);
-        result.append("}\n");
-        if (powerUsed) {
-            result.append(
-                 "inline power(base, exp) {\n" +
-                         "    int result = 1;\n" +
-                         "    int i = 0;\n" +
-                         "\n" +
-                         "    do\n" +
-                         "    :: (i < exp) ->\n" +
-                         "        result = result * base;\n" +
-                         "        i++\n" +
-                         "    :: else ->\n" +
-                         "        break\n" +
-                         "    od\n" +
-                         "}"
-            );
-        }
 
-
+        result.append("}\n\n");
+        result.append(
+                "init {\n" +
+                        "    run main();\n" +
+                        "}\n"
+        );
 
         return result.toString();
     }
+
+
 
 
 
@@ -179,16 +191,28 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     @Override
     public String visitPower(HashParser.PowerContext ctx) {
 
+
         if (ctx.power() == null) {
             return visit(ctx.unary());
         }
 
-        powerUsed = true;
+        String left = visit(ctx.unary());
+        String right = visit(ctx.power());
 
-        String base = visit(ctx.unary());
-        String exp  = visit(ctx.power());
+        String tmp = "tmp" + (tempCounter++);
 
-        return "power(" + base + ", " + exp + ")";
+        declarations.append("int ").append(tmp).append(";\n");
+
+        mainProcess.append(
+                "power(" +
+                        left + ", " +
+                        right + ", " +
+                        tmp +
+                        ");\n"
+        );
+
+
+        return tmp;
     }
 
 
@@ -399,7 +423,7 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
            update= visit(ctx.exp(expIndex));
         }
         loopStack.pop();
-        return init +startLabel+":\n" +
+        return init+";\n" +startLabel+":\n" +
                 "do\n" +
                 ":: (" + cond + ") -> \n" +
                 body +
