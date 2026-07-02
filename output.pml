@@ -1,20 +1,11 @@
-L0_start:
-do
-:: (i == 5) -> 
-L1_start:
-do
-:: (i == 2) -> 
-i + 1
-break;
+// --- Promela Output ---
+if
+:: (x > 10) -> x = x - 1;
 
-i + 3
+:: else ->
+if
+:: (x == 10) -> x = 1;
 
-:: else -> break  
-od;
-
-i + 2
-goto L0_start;
-
-
-:: else -> break  
-od;
+:: else ->
+fi
+fi
