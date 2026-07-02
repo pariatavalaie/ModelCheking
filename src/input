@@ -1,3 +1,9 @@
-adad x = 5+3*3+4**4*2;
-boole b = dorost;
-boole b = b && b ||x&&f;
+age (x > 10) bood {
+    x = x - 1;
+}
+vagarna age (x == 10) bood {
+x = 1;
+}
+vagarna {
+
+}

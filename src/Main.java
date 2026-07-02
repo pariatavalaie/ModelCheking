@@ -6,7 +6,7 @@ import java.io.IOException;
 public class Main {
     public static void main(String[] args) {
         // ۱. نام فایل ورودی (مثلاً input.hash)
-        String inputFile = "C:\\Users\\XMART\\IdeaProjects\\modelcheking\\src\\input";
+        String inputFile = "C:/Users/ACER/IdeaProjects/ModelCheking/src/input";
         String outputFile = "output.pml";
 
         try {
