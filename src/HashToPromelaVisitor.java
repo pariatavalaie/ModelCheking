@@ -8,31 +8,82 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     private String currentError = null;
     private Stack<LoopLabel> loopStack = new Stack<>();
     private int loopCounter = 0;
+    boolean powerUsed = false;
+    private int tempCounter = 0;
+    private StringBuilder declarations = new StringBuilder();
+    private StringBuilder mainProcess = new StringBuilder();
 
     @Override
     public String visitProgram(HashParser.ProgramContext ctx) {
-        StringBuilder out = new StringBuilder();
-        // اضافه کردن هدر برای اینکه خروجی خالی نباشد
-        out.append("// --- Promela Output ---\n");
 
-        if (ctx.children != null) {
-            for (var child : ctx.children) {
-                String result = visit(child);
-                if (result != null) out.append(result);
-            }
+        StringBuilder result = new StringBuilder();
+
+        // inline power
+        result.append(
+                "inline power(base, exp, result) {\n" +
+                        "    int i;\n" +
+                        "    result = 1;\n" +
+                        "    i = 0;\n" +
+                        "\n" +
+                        "    do\n" +
+                        "    :: (i < exp) ->\n" +
+                        "        result = result * base;\n" +
+                        "        i++\n" +
+                        "    :: else -> break\n" +
+                        "    od\n" +
+                        "}\n\n"
+        );
+
+        for (var d : ctx.topLevelDecl()) {
+            result.append(visit(d));
         }
-        return out.toString();
+
+
+        result.append("proctype main() {\n");
+
+
+        result.append(declarations);
+
+
+        result.append(mainProcess);
+
+        result.append("}\n\n");
+        result.append(
+                "init {\n" +
+                        "    run main();\n" +
+                        "}\n"
+        );
+
+        return result.toString();
     }
 
-    // این خیلی مهم است: هدایت از topLevelDecl به سمت varDecl یا functionDecl
+
+
+
+
     @Override
     public String visitTopLevelDecl(HashParser.TopLevelDeclContext ctx) {
-        if (ctx.varDecl() != null) return visit(ctx.varDecl()) ;
-        if (ctx.functionDecl() != null) return visit(ctx.functionDecl());
-        if (ctx.klassDecl() != null) return visit(ctx.klassDecl());
-        if(ctx.stmt() != null) return visit(ctx.stmt());
+
+        if (ctx.varDecl() != null) {
+            return visit(ctx.varDecl()) + ";\n";
+        }
+
+        if (ctx.functionDecl() != null) {
+            return visit(ctx.functionDecl());
+        }
+
+        if (ctx.klassDecl() != null) {
+            return visit(ctx.klassDecl());
+        }
+
+        if (ctx.stmt() != null) {
+            mainProcess.append(visit(ctx.stmt())).append("\n");
+            return "";
+        }
+
         return "";
     }
+
 
     @Override
     public String visitVarDecl(HashParser.VarDeclContext ctx) {
@@ -64,6 +115,11 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
             } else if (value.equals("ghalat")) {
                 return "false";
             }
+
+
+        }
+        if (ctx.exp() != null) {
+            return "(" + visit(ctx.exp()) + ")";
         }
         if (ctx.ID() != null) return ctx.ID().getText();
         return "";
@@ -134,77 +190,34 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
         return sb.toString();}
     @Override
     public String visitPower(HashParser.PowerContext ctx) {
+
+
         if (ctx.power() == null) {
             return visit(ctx.unary());
         }
 
-        String baseExpr = visit(ctx.unary());
+        String left = visit(ctx.unary());
+        String right = visit(ctx.power());
 
-        int exponent = evalConstPower(ctx.power());
+        String tmp = "tmp" + (tempCounter++);
 
-        if (exponent < 0) {
-            throw new RuntimeException("Negative exponent is not supported in Promela");
-        }
+        declarations.append("int ").append(tmp).append(";\n");
 
-        if (exponent == 0) {
-            return "1";
-        }
+        mainProcess.append(
+                "power(" +
+                        left + ", " +
+                        right + ", " +
+                        tmp +
+                        ");\n"
+        );
 
-        if (exponent == 1) {
-            return baseExpr;
-        }
 
-        StringBuilder sb = new StringBuilder("(");
-        for (int i = 0; i < exponent; i++) {
-            if (i > 0) {
-                sb.append(" * ");
-            }
-            sb.append(baseExpr);
-        }
-        sb.append(")");
-
-        return sb.toString();
+        return tmp;
     }
 
-    private int evalConstPower(HashParser.PowerContext ctx) {
-        int base = evalConstUnary(ctx.unary());
 
-        if (ctx.power() == null) {
-            return base;
-        }
 
-        int exponent = evalConstPower(ctx.power());
 
-        if (exponent < 0) {
-            throw new RuntimeException("Negative exponent is not supported in constant power expression");
-        }
-
-        return intPow(base, exponent);
-    }
-
-    private int evalConstUnary(HashParser.UnaryContext ctx) {
-        String text = ctx.getText();
-
-        if (text.matches("\\d+")) {
-            return Integer.parseInt(text);
-        }
-
-        if (text.matches("-\\d+")) {
-            return Integer.parseInt(text);
-        }
-
-        throw new RuntimeException("Power exponent must be a constant integer, but got: " + text);
-    }
-
-    private int intPow(int base, int exponent) {
-        int result = 1;
-
-        for (int i = 0; i < exponent; i++) {
-            result *= base;
-        }
-
-        return result;
-    }
     @Override
     public String visitAssign(HashParser.AssignContext ctx) {
         if (ctx.assign() == null) {
@@ -362,19 +375,10 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     }
     @Override
     public String visitWhileStmt(HashParser.WhileStmtContext ctx) {
-
         String cond = visit(ctx.exp());
-
-
         int id = loopCounter++;
-
         String startLabel = "L" + id + "_start";
-
-
-
         loopStack.push(new LoopLabel(startLabel));
-
-
         StringBuilder body = new StringBuilder();
         for (var s : ctx.stmt()) {
             body.append(visit(s)).append("\n");
@@ -387,37 +391,46 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
                 body +
                 "\n" +
                 ":: else -> break  \n" +
-                "od;\n"  ;
+                "od\n"  ;
 
     }
     @Override
     public String visitForStmt(HashParser.ForStmtContext ctx) {
 
         String init = "";
+        int id = loopCounter++;
+        int expIndex = 0;
+        String startLabel = "L" + id + "_start";
+        loopStack.push(new LoopLabel(startLabel));
         if (ctx.varDecl() != null) {
             init = visit(ctx.varDecl());
         } else if (ctx.exp(0) != null) {
             init = visit(ctx.exp(0)) + ";\n";
+            expIndex++;
         }
-
-        String cond = ctx.exp().size() > 0 ? visit(ctx.exp(0)) : "true";
-
-        String update = ctx.exp().size() > 1 ? visit(ctx.exp(1)) : "";
+        String cond="" ;
+        if (ctx.exp(expIndex)!=null) {
+            cond = visit(ctx.exp(expIndex));
+            expIndex++;
+        }
+        String update="";
 
         StringBuilder body = new StringBuilder();
-
         for (var s : ctx.stmt()) {
             body.append(visit(s)).append("\n");
         }
-
-        return init +
+        if (ctx.exp(expIndex)!=null) {
+           update= visit(ctx.exp(expIndex));
+        }
+        loopStack.pop();
+        return init+";\n" +startLabel+":\n" +
                 "do\n" +
-                ":: (" + cond + ") -> {\n" +
+                ":: (" + cond + ") -> \n" +
                 body +
                 update + ";\n" +
-                "}\n" +
+                "\n" +
                 ":: else -> break\n" +
-                "od;\n";
+                "od\n";
     }
 
     @Override
@@ -458,7 +471,6 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
 
 
 
-    // متدهای کمکی برای جلوگیری از نال در سطوح بالاتر
     @Override
     protected String aggregateResult(String aggregate, String nextResult) {
         if (aggregate == null) return nextResult;
