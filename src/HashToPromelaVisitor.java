@@ -419,67 +419,41 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
                 ":: else -> break\n" +
                 "od;\n";
     }
+
     @Override
     public String visitIfStmt(HashParser.IfStmtContext ctx) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("if\n");
-        int stmtCounter = 0;
-        int expSize = ctx.exp().size();
-        for (int i = 0; i < expSize; i++) {
-            String condition = visit(ctx.exp(i));
-            sb.append("  :: (").append(condition).append(") -> ");
-            sb.append(getStatementsInBlock(ctx, i, stmtCounter));
-            stmtCounter = updateStmtCounter(ctx, i, stmtCounter);
-            sb.append("\n");
-        }
-        int totalVagarna = ctx.Vagarna().size();
-        int elseIfCount = expSize - 1;
-
-        if (totalVagarna > elseIfCount) {
-            sb.append("  :: else -> ");
-            for (int k = stmtCounter; k < ctx.stmt().size(); k++) {
-                sb.append("\n      ").append(visit(ctx.stmt(k)));
-            }
-            sb.append("\n");
-        }
-
-        sb.append("fi");
-        return sb.toString();
+        return buildIf(ctx, 0, 0);
     }
-
-    private String getStatementsInBlock(HashParser.IfStmtContext ctx, int expIndex, int startStmt) {
-        StringBuilder block = new StringBuilder();
-        int nextExpStart = (expIndex + 1 < ctx.exp().size()) ? ctx.exp(expIndex + 1).start.getStartIndex()
-                : Integer.MAX_VALUE;
-        for (int i = startStmt; i < ctx.stmt().size(); i++) {
-            if (ctx.stmt(i).start.getStartIndex() < nextExpStart) {
-                if (ctx.Vagarna().size() > (ctx.exp().size()-1)) {
-                    int elseStart = ctx.Vagarna(ctx.Vagarna().size()-1).getSymbol().getStartIndex();
-                    if (ctx.stmt(i).start.getStartIndex() > elseStart) break;
-                }
-                block.append("\n      ").append(visit(ctx.stmt(i)));
-            } else {
-                break;
+    private String buildIf(HashParser.IfStmtContext ctx, int expIndex, int stmtIndex) {
+        StringBuilder Result = new StringBuilder();
+        Result.append("if\n");
+        String cond = visit(ctx.exp(expIndex));
+        Result.append(":: (").append(cond).append(") ->");
+        int nextStmt = stmtIndex;
+        while (nextStmt < ctx.stmt().size()) {
+            if (expIndex + 1 < ctx.exp().size()) {
+                int nextExpStart = ctx.exp(expIndex + 1).start.getStartIndex();
+                if (ctx.stmt(nextStmt).start.getStartIndex() >= nextExpStart)
+                    break;
+            }
+            Result.append(" ").append(visit(ctx.stmt(nextStmt)));
+            nextStmt++;
+        }
+        if (expIndex + 1 < ctx.exp().size()) {
+            Result.append("\n:: else ->\n");
+            Result.append(buildIf(ctx, expIndex + 1, nextStmt));
+        } else if (ctx.Vagarna().size() > ctx.exp().size() - 1) {
+            Result.append("\n:: else ->");
+            while (nextStmt < ctx.stmt().size()) {
+                Result.append(" ").append(visit(ctx.stmt(nextStmt)));
+                nextStmt++;
             }
         }
-        return block.toString();
+        Result.append("\nfi");
+        return Result.toString();
     }
 
-    private int updateStmtCounter(HashParser.IfStmtContext ctx, int expIndex, int currentCounter) {
-        int nextExpStart = (expIndex + 1 < ctx.exp().size())
-                ? ctx.exp(expIndex + 1).start.getStartIndex()
-                : Integer.MAX_VALUE;
 
-        int count = currentCounter;
-        while (count < ctx.stmt().size() && ctx.stmt(count).start.getStartIndex() < nextExpStart) {
-            if (ctx.Vagarna().size() > (ctx.exp().size()-1)) {
-                int elseStart = ctx.Vagarna(ctx.Vagarna().size()-1).getSymbol().getStartIndex();
-                if (ctx.stmt(count).start.getStartIndex() > elseStart) break;
-            }
-            count++;
-        }
-        return count;
-    }
 
 
 
