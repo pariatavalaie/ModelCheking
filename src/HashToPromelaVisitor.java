@@ -12,6 +12,7 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     private int tempCounter = 0;
     private StringBuilder declarations = new StringBuilder();
     private StringBuilder mainProcess = new StringBuilder();
+    StringBuilder currentStmtPrefix = new StringBuilder();
 
     @Override
     public String visitProgram(HashParser.ProgramContext ctx) {
@@ -55,6 +56,7 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
                         "    run main();\n" +
                         "}\n"
         );
+        result.append("ltl p1 { [] (!divByZero) }");
 
         return result.toString();
     }
@@ -128,19 +130,35 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     }
     @Override
     public String visitStmt(HashParser.StmtContext ctx) {
-        if (ctx.ifStmt() != null) return visit(ctx.ifStmt());
-        if (ctx.loopStmt() != null) return visit(ctx.loopStmt());
-        if (ctx.printStmt() != null) return visit(ctx.printStmt());
-        if (ctx.inputStmt() != null) return visit(ctx.inputStmt());
-        if (ctx.switchStmt() != null) return visit(ctx.switchStmt());
-        if (ctx.breakStmt() != null) return visit(ctx.breakStmt());
-        if (ctx.continueStmt() != null) return visit(ctx.continueStmt());
-        if (ctx.exceptionHandeling() != null) return visit(ctx.exceptionHandeling());
-        if (ctx.throwexception() != null) return visit(ctx.throwexception());
-        if (ctx.varDecl() != null) return visit(ctx.varDecl()) + ";\n";
-        if (ctx.exp() != null) return visit(ctx.exp()) + ";\n";
-        return "";
+        // ۱. پاک کردن پیش‌نیازهای قبلی برای دستور جدید
+        currentStmtPrefix.setLength(0);
+
+        String stmtBody = "";
+
+        if (ctx.ifStmt() != null) {
+            stmtBody = visit(ctx.ifStmt());
+        } else if (ctx.loopStmt() != null) {
+            stmtBody = visit(ctx.loopStmt());
+        }  else if (ctx.breakStmt() != null) {
+            stmtBody = visit((ctx.breakStmt()));
+        } else if (ctx.continueStmt() != null) {
+            stmtBody =visit(ctx.continueStmt());
+        } else if (ctx.exceptionHandeling() != null) {
+            stmtBody = visit(ctx.exceptionHandeling());
+        } else if (ctx.throwexception() != null) {
+            stmtBody = visit(ctx.throwexception()) ;
+        } else if (ctx.varDecl() != null) {
+            stmtBody = visit(ctx.varDecl()) + ";";
+        } else if (ctx.exp() != null) {
+            stmtBody = visit(ctx.exp()) + ";";
+        }
+        String finalResult = currentStmtPrefix.toString() + stmtBody + "\n";
+
+        currentStmtPrefix.setLength(0);
+
+        return finalResult;
     }
+
 
     @Override
     public String visitLogicalAnd(HashParser.LogicalAndContext ctx) {
@@ -191,26 +209,26 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
                 String tmp = "tmp_div_" + (tempCounter++);
                 declarations.append("int ").append(tmp).append(";\n");
 
-                mainProcess.append("if\n");
-                mainProcess.append(":: (").append(right).append(" == 0) ->\n");
-                mainProcess.append("    divByZero = true;\n");
-                mainProcess.append(":: else ->\n");
-                mainProcess.append("    ").append(tmp).append(" = ")
+                currentStmtPrefix.append("if\n");
+                currentStmtPrefix.append(":: (").append(right).append(" == 0) ->\n");
+                currentStmtPrefix.append("    divByZero = true;\n");
+                currentStmtPrefix.append(":: else ->\n");
+                currentStmtPrefix.append("    ").append(tmp).append(" = ")
                         .append(current).append(" / ").append(right).append(";\n");
-                mainProcess.append("fi;\n");
+                currentStmtPrefix.append("fi;\n");
 
                 current = tmp;
             } else if (op.equals("%")) {
                 String tmp = "tmp_mod_" + (tempCounter++);
                 declarations.append("int ").append(tmp).append(";\n");
 
-                mainProcess.append("if\n");
-                mainProcess.append(":: (").append(right).append(" == 0) ->\n");
-                mainProcess.append("    divByZero = true;\n");
-                mainProcess.append(":: else ->\n");
-                mainProcess.append("    ").append(tmp).append(" = ")
-                        .append(current).append(" % ").append(right).append(";\n");
-                mainProcess.append("fi;\n");
+                currentStmtPrefix.append("if\n");
+                currentStmtPrefix.append(":: (").append(right).append(" == 0) ->\n");
+                currentStmtPrefix.append("    divByZero = true;\n");
+                currentStmtPrefix.append(":: else ->\n");
+                currentStmtPrefix.append("    ").append(tmp).append(" = ")
+                        .append(current).append(" / ").append(right).append(";\n");
+                currentStmtPrefix.append("fi;\n");
 
                 current = tmp;
             } else {
