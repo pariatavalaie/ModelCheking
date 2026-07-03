@@ -12,13 +12,14 @@ inline power(base, exp, result) {
 }
 
 bool divByZero = false;
+int x = 0;
 proctype main() {
 int tmp_div_0;
 int i = 0;
 L0_start:
 do
 :: (i < 2) -> 
-int b = 0;
+int b = -2;
 
 if
 :: (b == 0) ->
@@ -26,7 +27,7 @@ if
 :: else ->
     tmp_div_0 = 5 / b;
 fi;
-int x = tmp_div_0;
+x = tmp_div_0;
 
 i++;
 
@@ -40,3 +41,4 @@ init {
     run main();
 }
 ltl p1 { [] (!divByZero) }
+ltl p4 { [](x >= 0) }

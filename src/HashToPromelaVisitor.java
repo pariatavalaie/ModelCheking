@@ -56,7 +56,8 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
                         "    run main();\n" +
                         "}\n"
         );
-        result.append("ltl p1 { [] (!divByZero) }");
+        result.append("ltl p1 { [] (!divByZero) }\n");
+        result.append("ltl p4 { [](x >= 0) }");
 
         return result.toString();
     }
