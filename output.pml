@@ -11,14 +11,32 @@ inline power(base, exp, result) {
     od
 }
 
-int x = 5 + 3 * 3 + tmp0 * 2;
-bool b = true;
-bool b = b && b || x && f;
+bool divByZero = false;
 proctype main() {
-int tmp0;
-power(4, 4, tmp0);
+int tmp_div_0;
+int i = 0;
+L0_start:
+do
+:: (i < 2) -> 
+int b = 0;
+
+if
+:: (b == 0) ->
+    divByZero = true;
+:: else ->
+    tmp_div_0 = 5 / b;
+fi;
+int x = tmp_div_0;
+
+i++;
+
+:: else -> break
+od
+
+
 }
 
 init {
     run main();
 }
+ltl p1 { [] (!divByZero) }

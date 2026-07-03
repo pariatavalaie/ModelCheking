@@ -29,17 +29,11 @@ public class Main {
                 System.err.println("❌ خطای نحوی (Syntax Error) در کد ورودی پیدا شد.");
                 return;
             }
-
-            // ۷. فراخوانی Visitor برای ترجمه به Promela
             HashToPromelaVisitor translator = new HashToPromelaVisitor();
             String promelaCode = translator.visit(tree);
-
-            // ۸. چاپ خروجی در کنسول (برای تست)
             System.out.println("✅ Translation Successful!");
             System.out.println("-------------------------");
             System.out.println(promelaCode);
-
-            // ۹. ذخیره کد تولید شده در فایل .pml
             saveToFile(outputFile, promelaCode);
             System.out.println("-------------------------");
             System.out.println("💾 Output saved to: " + outputFile);

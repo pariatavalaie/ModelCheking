@@ -12,6 +12,7 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     private int tempCounter = 0;
     private StringBuilder declarations = new StringBuilder();
     private StringBuilder mainProcess = new StringBuilder();
+    StringBuilder currentStmtPrefix = new StringBuilder();
 
     @Override
     public String visitProgram(HashParser.ProgramContext ctx) {
@@ -33,6 +34,7 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
                         "    od\n" +
                         "}\n\n"
         );
+        result.append("bool divByZero = false;\n");
 
         for (var d : ctx.topLevelDecl()) {
             result.append(visit(d));
@@ -40,6 +42,7 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
 
 
         result.append("proctype main() {\n");
+
 
 
         result.append(declarations);
@@ -53,6 +56,7 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
                         "    run main();\n" +
                         "}\n"
         );
+        result.append("ltl p1 { [] (!divByZero) }");
 
         return result.toString();
     }
@@ -126,19 +130,35 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     }
     @Override
     public String visitStmt(HashParser.StmtContext ctx) {
-        if (ctx.ifStmt() != null) return visit(ctx.ifStmt());
-        if (ctx.loopStmt() != null) return visit(ctx.loopStmt());
-        if (ctx.printStmt() != null) return visit(ctx.printStmt());
-        if (ctx.inputStmt() != null) return visit(ctx.inputStmt());
-        if (ctx.switchStmt() != null) return visit(ctx.switchStmt());
-        if (ctx.breakStmt() != null) return visit(ctx.breakStmt());
-        if (ctx.continueStmt() != null) return visit(ctx.continueStmt());
-        if (ctx.exceptionHandeling() != null) return visit(ctx.exceptionHandeling());
-        if (ctx.throwexception() != null) return visit(ctx.throwexception());
-        if (ctx.varDecl() != null) return visit(ctx.varDecl()) + ";\n";
-        if (ctx.exp() != null) return visit(ctx.exp()) + ";\n";
-        return "";
+        // ۱. پاک کردن پیش‌نیازهای قبلی برای دستور جدید
+        currentStmtPrefix.setLength(0);
+
+        String stmtBody = "";
+
+        if (ctx.ifStmt() != null) {
+            stmtBody = visit(ctx.ifStmt());
+        } else if (ctx.loopStmt() != null) {
+            stmtBody = visit(ctx.loopStmt());
+        }  else if (ctx.breakStmt() != null) {
+            stmtBody = visit((ctx.breakStmt()));
+        } else if (ctx.continueStmt() != null) {
+            stmtBody =visit(ctx.continueStmt());
+        } else if (ctx.exceptionHandeling() != null) {
+            stmtBody = visit(ctx.exceptionHandeling());
+        } else if (ctx.throwexception() != null) {
+            stmtBody = visit(ctx.throwexception()) ;
+        } else if (ctx.varDecl() != null) {
+            stmtBody = visit(ctx.varDecl()) + ";";
+        } else if (ctx.exp() != null) {
+            stmtBody = visit(ctx.exp()) + ";";
+        }
+        String finalResult = currentStmtPrefix.toString() + stmtBody + "\n";
+
+        currentStmtPrefix.setLength(0);
+
+        return finalResult;
     }
+
 
     @Override
     public String visitLogicalAnd(HashParser.LogicalAndContext ctx) {
@@ -177,17 +197,48 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
             sb.append(visit(ctx.multiplicative(i)));
         }
         return sb.toString(); }
+    @Override
     public String visitMultiplicative(HashParser.MultiplicativeContext ctx) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(visit(ctx.power(0)));
+        String current = visit(ctx.power(0));
+
         for (int i = 1; i < ctx.power().size(); i++) {
             String op = ctx.getChild(2 * i - 1).getText();
-            sb.append(" ").append(op).append(" ");
-            sb.append(visit(ctx.power(i)));
+            String right = visit(ctx.power(i));
+
+            if (op.equals("/")) {
+                String tmp = "tmp_div_" + (tempCounter++);
+                declarations.append("int ").append(tmp).append(";\n");
+
+                currentStmtPrefix.append("if\n");
+                currentStmtPrefix.append(":: (").append(right).append(" == 0) ->\n");
+                currentStmtPrefix.append("    divByZero = true;\n");
+                currentStmtPrefix.append(":: else ->\n");
+                currentStmtPrefix.append("    ").append(tmp).append(" = ")
+                        .append(current).append(" / ").append(right).append(";\n");
+                currentStmtPrefix.append("fi;\n");
+
+                current = tmp;
+            } else if (op.equals("%")) {
+                String tmp = "tmp_mod_" + (tempCounter++);
+                declarations.append("int ").append(tmp).append(";\n");
+
+                currentStmtPrefix.append("if\n");
+                currentStmtPrefix.append(":: (").append(right).append(" == 0) ->\n");
+                currentStmtPrefix.append("    divByZero = true;\n");
+                currentStmtPrefix.append(":: else ->\n");
+                currentStmtPrefix.append("    ").append(tmp).append(" = ")
+                        .append(current).append(" / ").append(right).append(";\n");
+                currentStmtPrefix.append("fi;\n");
+
+                current = tmp;
+            } else {
+                current = current + " " + op + " " + right;
+            }
         }
 
+        return current;
+    }
 
-        return sb.toString();}
     @Override
     public String visitPower(HashParser.PowerContext ctx) {
 
@@ -236,10 +287,16 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
             case "*=":
                 return left + " = " + left + " * " + right;
             case "/=":
-                return left + " = " + left + " / " + right;
+                return "if\n" +
+                        ":: (" + right + " == 0) ->\n" +
+                        "    divByZero = true;\n" +
+                        ":: else ->\n" +
+                        "    " + left + " = " + left + " / " + right + ";\n" +
+                        "fi";
             default:
                 return left + " = " + right;
         }
+
     }
     @Override
     public String visitEquality(HashParser.EqualityContext ctx) {

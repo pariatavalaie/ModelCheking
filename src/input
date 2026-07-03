@@ -1,3 +1,5 @@
-adad x = 5+3*3+4**4*2;
-boole b = dorost;
-boole b = b && b ||x&&f;
+
+baraye( adad i=2;i<2;i++){
+adad b=0;
+adad x = 5/b;
+}
