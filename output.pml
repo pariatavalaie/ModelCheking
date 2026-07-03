@@ -1,20 +1,24 @@
-L0_start:
-do
-:: (i == 5) -> 
-L1_start:
-do
-:: (i == 2) -> 
-i + 1
-break;
+inline power(base, exp, result) {
+    int i;
+    result = 1;
+    i = 0;
 
-i + 3
+    do
+    :: (i < exp) ->
+        result = result * base;
+        i++
+    :: else -> break
+    od
+}
 
-:: else -> break  
-od;
+int x = 5 + 3 * 3 + tmp0 * 2;
+bool b = true;
+bool b = b && b || x && f;
+proctype main() {
+int tmp0;
+power(4, 4, tmp0);
+}
 
-i + 2
-goto L0_start;
-
-
-:: else -> break  
-od;
+init {
+    run main();
+}
