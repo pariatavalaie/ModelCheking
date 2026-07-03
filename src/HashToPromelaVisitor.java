@@ -57,6 +57,8 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
                         "}\n"
         );
         result.append("ltl p1 { [] (!divByZero) }");
+        result.append("ltl p2 { [](main@inLoop_0 -> <>main@exitLoop_0) } ");
+
 
         return result.toString();
     }
@@ -442,13 +444,18 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
         }
 
         loopStack.pop();
+        String inLoopLabel = "inLoop_" + id;
+        String exitLoopLabel = "exitLoop_" + id;
         return startLabel + ":\n" +
                 "do\n" +
                 ":: (" + cond + ") -> \n" +
+                inLoopLabel + " : skip " + ";\n" +
                 body +
                 "\n" +
                 ":: else -> break  \n" +
-                "od\n"  ;
+                "od\n"  +
+                exitLoopLabel + ": skip;\n";
+
 
     }
     @Override
@@ -480,14 +487,18 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
            update= visit(ctx.exp(expIndex));
         }
         loopStack.pop();
+        String inLoopLabel = "inLoop_" + id;
+        String exitLoopLabel = "exitLoop_" + id;
         return init+";\n" +startLabel+":\n" +
                 "do\n" +
                 ":: (" + cond + ") -> \n" +
+                inLoopLabel + " : skip " + ";\n" +
                 body +
                 update + ";\n" +
                 "\n" +
                 ":: else -> break\n" +
-                "od\n";
+                "od\n" +
+                exitLoopLabel + ": skip;\n";
     }
 
     @Override
