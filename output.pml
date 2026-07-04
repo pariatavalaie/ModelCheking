@@ -29,16 +29,19 @@ if
 fi;
 x = tmp_div_0;
 
-i = i;
+i = i + 1;
 
 :: else -> break
 od
 exitLoop_0: skip;
 
 
+endReached: skip; 
 }
 
 init {
     run main();
 }
-ltl p1 { [] (!divByZero) }ltl p2 { [](main@inLoop_0 -> <>main@exitLoop_0) } 
+ltl p1 { [] (!divByZero) }
+ltl p2 { [](main@inLoop_0 -> <>main@exitLoop_0) } 
+ltl p3 { !<> (main@endReached) }

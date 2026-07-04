@@ -1,5 +1,5 @@
 adad b = 0 ;
 adad x;
-baraye( adad i=0;i<2;i = i){
+baraye( adad i=0;i<2;i = i + 1){
  x = 5/b;
 }

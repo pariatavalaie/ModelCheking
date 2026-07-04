@@ -18,6 +18,7 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     public String visitProgram(HashParser.ProgramContext ctx) {
 
         StringBuilder result = new StringBuilder();
+        String endReachedLabel = "endReached: skip; \n";
 
         // inline power
         result.append(
@@ -50,14 +51,16 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
 
         result.append(mainProcess);
 
+        result.append(endReachedLabel);
         result.append("}\n\n");
         result.append(
                 "init {\n" +
                         "    run main();\n" +
                         "}\n"
         );
-        result.append("ltl p1 { [] (!divByZero) }");
-        result.append("ltl p2 { [](main@inLoop_0 -> <>main@exitLoop_0) } ");
+        result.append("ltl p1 { [] (!divByZero) }\n");
+        result.append("ltl p2 { [](main@inLoop_0 -> <>main@exitLoop_0) } \n");
+        result.append("ltl p3 { !<> (main@endReached) }\n");
 
 
         return result.toString();
