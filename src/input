@@ -1,5 +1,166 @@
-adad b = 0 ;
-adad x;
-baraye( adad i=0;i<2;i = i){
- x = 5/b;
+adad x = 10;
+bebin hich main(){
+adad y = 3;
+adad divisor = 3;
+
+adad sum = 0;
+adad difference = 0;
+adad product = 0;
+adad quotient = 0;
+adad remainder = 0;
+adad powerResult = 0;
+adad result = 0;
+
+adad i = 0;
+adad j = 0;
+adad outer = 0;
+adad inner = 0;
+
+boole trueValue = dorost;
+boole falseValue = ghalat;
+
+boole lessCheck = ghalat;
+boole lessEqualCheck = ghalat;
+boole greaterCheck = ghalat;
+boole greaterEqualCheck = ghalat;
+boole equalCheck = ghalat;
+boole notEqualCheck = ghalat;
+boole logicalCheck = ghalat;
+boole exceptionHandled = ghalat;
+
+
+sum = x + y;
+difference = x - y;
+product = x * y;
+
+quotient = x / divisor;
+remainder = x % divisor;
+
+powerResult = y ** 3;
+
+
+x += 2;
+x -= 2;
+x *= 2;
+x /= 2;
+
+
+i++;
+i--;
+
+
+lessCheck = y < x;
+lessEqualCheck = y <= x;
+greaterCheck = x > y;
+greaterEqualCheck = x >= y;
+equalCheck = x == y;
+notEqualCheck = x != y;
+
+logicalCheck =
+    (lessCheck && greaterCheck)
+    ||
+    (greaterEqualCheck && !falseValue);
+
+
+age (logicalCheck) bood {
+
+    result = sum;
+
+} vagarna {
+
+    result = difference;
+}
+
+
+i = 0;
+
+ta (i < 8) {
+
+    i = i + 1;
+
+    age (i == 2) bood {
+        edame;
+    }
+
+    sum = sum + i;
+
+    age (sum > 25) bood {
+        shekan;
+    }
+}
+
+
+baraye (j = 0; j < 6; j = j + 1) {
+
+    product = product + j;
+
+    age (j == 3) bood {
+        shekan;
+    }
+}
+
+
+outer = 0;
+
+ta (outer < 3) {
+
+    inner = 0;
+
+    ta (inner < 5) {
+
+        inner = inner + 1;
+
+        age (inner == 2) bood {
+            shekan;
+        }
+    }
+
+    outer = outer + 1;
+}
+
+
+emtehan {
+
+    age (quotient == 3) bood {
+        bendaz SefrBood();
+    }
+
+    result = 100;
+
+} gereftar (SefrBood e) {
+
+    exceptionHandled = dorost;
+    result = 0 - 1;
+}
+
+
+age (exceptionHandled) bood {
+
+    result = result + 1;
+
+
+} vagarna {
+
+    result = 0;
+}
+
+age (x > 0) bood {
+
+    age (y > 0) bood {
+
+        age (x > y) bood {
+            result = 1;
+        } vagarna {
+            result = 2;
+        }
+
+    } vagarna {
+      adad z=1;
+        result = 3;
+    }
+
+} vagarna {
+
+    result = 4;
+}
 }

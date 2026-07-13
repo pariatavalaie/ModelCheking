@@ -1,4 +1,3 @@
-import java.util.HashMap;
 
 import java.util.Stack;
 
@@ -8,7 +7,6 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     private String currentError = null;
     private Stack<LoopLabel> loopStack = new Stack<>();
     private int loopCounter = 0;
-    boolean powerUsed = false;
     private int tempCounter = 0;
     private StringBuilder declarations = new StringBuilder();
     private StringBuilder mainProcess = new StringBuilder();
@@ -22,43 +20,30 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
         // inline power
         result.append(
                 "inline power(base, exp, result) {\n" +
-                        "    int i;\n" +
+                        "    int q;\n" +
                         "    result = 1;\n" +
-                        "    i = 0;\n" +
+                        "    q = 0;\n" +
                         "\n" +
                         "    do\n" +
-                        "    :: (i < exp) ->\n" +
+                        "    :: (q < exp) ->\n" +
                         "        result = result * base;\n" +
-                        "        i++\n" +
+                        "        q++\n" +
                         "    :: else -> break\n" +
                         "    od\n" +
                         "}\n\n"
         );
         result.append("bool divByZero = false;\n");
+        result.append("bool endReached = false;\n");
 
         for (var d : ctx.topLevelDecl()) {
             result.append(visit(d));
         }
 
-
-        result.append("proctype main() {\n");
-
-
-
-        result.append(declarations);
-
-
-        result.append(mainProcess);
-
-        result.append("}\n\n");
         result.append(
                 "init {\n" +
                         "    run main();\n" +
                         "}\n"
         );
-        result.append("ltl p1 { [] (!divByZero) }");
-        result.append("ltl p2 { [](main@inLoop_0 -> <>main@exitLoop_0) } ");
-        result.append("ltl p4 { [](x >= 0) }");
 
         return result.toString();
     }
@@ -82,11 +67,34 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
             return visit(ctx.klassDecl());
         }
 
-        if (ctx.stmt() != null) {
-            mainProcess.append(visit(ctx.stmt())).append("\n");
-            return "";
+
+
+        return "";
+    }
+    @Override
+    public String visitFunctionDecl(HashParser.FunctionDeclContext ctx) {
+        if(ctx.voidfunction() != null) {
+            visit(ctx.voidfunction());
         }
 
+        StringBuilder result = new StringBuilder();
+        result.append("proctype main() {\n");
+
+        result.append(declarations);
+        result.append(mainProcess);
+        result.append("endReached=true; \n");
+
+        result.append("}\n\n");
+        return result.toString();
+    }
+
+
+    @Override
+    public String visitVoidfunction(HashParser. VoidfunctionContext ctx){
+
+        for (int i=0;i<ctx.stmt().size();i++){
+            mainProcess.append(visit(ctx.stmt(i)));
+        }
         return "";
     }
 
@@ -505,35 +513,96 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     public String visitIfStmt(HashParser.IfStmtContext ctx) {
         return buildIf(ctx, 0, 0);
     }
-    private String buildIf(HashParser.IfStmtContext ctx, int expIndex, int stmtIndex) {
-        StringBuilder Result = new StringBuilder();
-        Result.append("if\n");
-        String cond = visit(ctx.exp(expIndex));
-        Result.append(":: (").append(cond).append(") ->");
-        int nextStmt = stmtIndex;
-        while (nextStmt < ctx.stmt().size()) {
-            if (expIndex + 1 < ctx.exp().size()) {
-                int nextExpStart = ctx.exp(expIndex + 1).start.getStartIndex();
-                if (ctx.stmt(nextStmt).start.getStartIndex() >= nextExpStart)
-                    break;
-            }
-            Result.append(" ").append(visit(ctx.stmt(nextStmt)));
-            nextStmt++;
-        }
-        if (expIndex + 1 < ctx.exp().size()) {
-            Result.append("\n:: else ->\n");
-            Result.append(buildIf(ctx, expIndex + 1, nextStmt));
-        } else if (ctx.Vagarna().size() > ctx.exp().size() - 1) {
-            Result.append("\n:: else ->");
-            while (nextStmt < ctx.stmt().size()) {
-                Result.append(" ").append(visit(ctx.stmt(nextStmt)));
-                nextStmt++;
-            }
-        }
-        Result.append("\nfi");
-        return Result.toString();
-    }
 
+    private String buildIf(
+            HashParser.IfStmtContext ctx,
+            int expIndex,
+            int stmtIndex
+    ) {
+        StringBuilder result = new StringBuilder();
+
+        result.append("if\n");
+
+        String cond = visit(ctx.exp(expIndex));
+
+        result.append(":: (")
+                .append(cond)
+                .append(") ->\n");
+
+        int nextStmt = stmtIndex;
+
+
+        int branchEnd = Integer.MAX_VALUE;
+
+        if (expIndex < ctx.Vagarna().size()) {
+            branchEnd = ctx.Vagarna(expIndex)
+                    .getSymbol()
+                    .getStartIndex();
+        }
+
+        boolean hasThenStatement = false;
+
+        while (nextStmt < ctx.stmt().size()) {
+
+            int stmtStart =
+                    ctx.stmt(nextStmt).start.getStartIndex();
+
+            if (stmtStart >= branchEnd) {
+                break;
+            }
+
+            result.append(visit(ctx.stmt(nextStmt)));
+            nextStmt++;
+            hasThenStatement = true;
+        }
+
+
+        if (!hasThenStatement) {
+            result.append("skip;\n");
+        }
+
+        boolean hasNextCondition =
+                expIndex + 1 < ctx.exp().size();
+
+
+        boolean hasFinalElse =
+                ctx.Vagarna().size() >= ctx.exp().size();
+
+        if (hasNextCondition) {
+
+
+            result.append(":: else ->\n");
+
+            result.append(
+                    buildIf(ctx, expIndex + 1, nextStmt)
+            );
+
+        } else if (hasFinalElse) {
+
+
+            result.append(":: else ->\n");
+
+            boolean hasElseStatement = false;
+
+            while (nextStmt < ctx.stmt().size()) {
+                result.append(visit(ctx.stmt(nextStmt)));
+                nextStmt++;
+                hasElseStatement = true;
+            }
+
+            if (!hasElseStatement) {
+                result.append("skip;\n");
+            }
+
+        } else {
+
+            result.append(":: else -> skip;\n");
+        }
+
+        result.append("fi;\n");
+
+        return result.toString();
+    }
 
 
 

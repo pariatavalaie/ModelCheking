@@ -1,0 +1,7 @@
+ltl p1 { [] (!divByZero) }
+
+ltl p2 { [] (main@inLoop_0 -> <> main@exitLoop_0) }
+
+ltl p3 { [] (x >= 0) }
+
+ltl p4 { !(<> endReached) }

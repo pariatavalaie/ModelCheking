@@ -7,7 +7,7 @@ basteDecl : Baste ID ( '.' ID )* ';';
 biarDecl : Biar ID ('.'ID)*('.' '*')? ';' ;
 topLevelDecl: klassDecl
              |functionDecl
-             |varDecl ';'|stmt;
+             |varDecl ';';
 //----------------------------------class------------------------------------------------
 klassDecl : Klass CLASSID '{' klassBody* '}';
 

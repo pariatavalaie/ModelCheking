@@ -18,3 +18,21 @@ accept_S4:
 	:: (! (((main@exitLoop_0)))) -> goto accept_S4
 	od;
 }
+never p3 {    /* !([] ((x>=0))) */
+T0_init:
+	do
+	:: atomic { (! (((x>=0)))) -> assert(!(! (((x>=0))))) }
+	:: (1) -> goto T0_init
+	od;
+accept_all:
+	skip
+}
+never p4 {    /* !(! (<> (endReached))) */
+T0_init:
+	do
+	:: atomic { ((endReached)) -> assert(!((endReached))) }
+	:: (1) -> goto T0_init
+	od;
+accept_all:
+	skip
+}
