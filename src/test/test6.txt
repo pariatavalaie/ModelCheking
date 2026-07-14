@@ -1,0 +1,11 @@
+		adad x = 0;
+
+		bebin hich main() {
+			emtehan {
+				x = 10;
+				bendaz SefrBood();
+			}
+			gereftar(SefrBood e) {
+				x = 1;
+			}
+		}

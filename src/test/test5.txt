@@ -1,0 +1,15 @@
+   adad x=10;
+   adad result=0;
+	bebin hich main() {
+    		age (x > 0)bood {
+    		 age(x==2)bood{
+    			result = 1;
+    		}
+    		}
+    		vagarna age (x == 0)bood {
+    			result = 0;
+    		}
+    		vagarna {
+    			result = 2;
+    		}
+}

@@ -1,0 +1,10 @@
+		adad x = 10;
+		adad y = 5;
+		bebin hich main() {
+		  ta (x>10){
+		    ta(y>5){
+		    y+=x+1;
+		  }
+		  x++;
+		  }
+		}

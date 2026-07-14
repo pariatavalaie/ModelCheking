@@ -1,0 +1,54 @@
+adad a = 2;
+adad b = 3;
+adad c = 4;
+adad d = 20;
+adad e = 5;
+adad f = 3;
+
+adad result = 0;
+adad grouped = 0;
+adad powChain = 0;
+adad x = 0;
+adad copy = 0;
+
+boole rel1 = ghalat;
+boole rel2 = ghalat;
+boole eq1 = ghalat;
+boole eq2 = ghalat;
+boole logic1 = ghalat;
+boole logic2 = ghalat;
+boole logic3 = ghalat;
+
+  bebin hich main() {
+
+    result = a + b * c **2 - d / e % f;
+
+    grouped = (a + b) * c;
+
+    powChain = 2 ** 3 ** 2;
+
+    rel1 = result > grouped;
+    rel2 = a + b <= c + 1;
+
+    eq1 = result != grouped;
+    eq2 = a + b == 5;
+
+    logic1 = rel1 && eq1;
+
+    logic2 = ghalat || rel2 && eq2;
+
+    logic3 = !(result < 40) && dorost;
+
+    x = 10;
+    x += 5;
+    x -= 3;
+    x *= 2;
+    x /= 4;
+
+    copy = x;
+
+    a++;
+    --b;
+    ++c;
+    d--;
+}

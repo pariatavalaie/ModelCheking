@@ -1,0 +1,8 @@
+	adad x = 10;
+	adad y = 0;
+
+	bebin	hich main() {
+     baraye(adad i=0;i<x;i++){
+      y+=x;
+     }
+		}

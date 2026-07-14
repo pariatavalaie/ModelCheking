@@ -148,7 +148,6 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     }
     @Override
     public String visitStmt(HashParser.StmtContext ctx) {
-        // ۱. پاک کردن پیش‌نیازهای قبلی برای دستور جدید
         currentStmtPrefix.setLength(0);
 
         String stmtBody = "";
@@ -245,7 +244,7 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
                 currentStmtPrefix.append("    divByZero = true;\n");
                 currentStmtPrefix.append(":: else ->\n");
                 currentStmtPrefix.append("    ").append(tmp).append(" = ")
-                        .append(current).append(" / ").append(right).append(";\n");
+                        .append(current).append(" % ").append(right).append(";\n");
                 currentStmtPrefix.append("fi;\n");
 
                 current = tmp;
@@ -478,43 +477,67 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     public String visitForStmt(HashParser.ForStmtContext ctx) {
 
         String init = "";
+        String cond = "";
+        String update = "";
         int id = loopCounter++;
         int expIndex = 0;
-        String startLabel = "L" + id + "_start";
-        loopStack.push(new LoopLabel(startLabel));
+        String updateLabel = "L" + id + "_update";
+        loopStack.push(new LoopLabel(updateLabel));
         if (ctx.varDecl() != null) {
             init = visit(ctx.varDecl());
-        } else if (ctx.exp(0) != null) {
-            init = visit(ctx.exp(0)) + ";\n";
+        } else if (ctx.exp().size() > expIndex) {
+            init = visit(ctx.exp(expIndex));
             expIndex++;
         }
-        String cond="" ;
-        if (ctx.exp(expIndex)!=null) {
+
+        if (ctx.exp().size() > expIndex) {
             cond = visit(ctx.exp(expIndex));
             expIndex++;
         }
-        String update="";
+
+        if (cond.isEmpty()) {
+            cond = "true";
+        }
 
         StringBuilder body = new StringBuilder();
-        for (var s : ctx.stmt()) {
-            body.append(visit(s)).append("\n");
+
+        for (var stmt : ctx.stmt()) {
+            body.append(visit(stmt));
         }
-        if (ctx.exp(expIndex)!=null) {
-           update= visit(ctx.exp(expIndex));
+
+        if (ctx.exp().size() > expIndex) {
+            update = visit(ctx.exp(expIndex));
         }
+
         loopStack.pop();
+
         String inLoopLabel = "inLoop_" + id;
         String exitLoopLabel = "exitLoop_" + id;
-        return init+";\n" +startLabel+":\n" +
-                "do\n" +
-                ":: (" + cond + ") -> \n" +
-                inLoopLabel + " : skip " + ";\n" +
-                body +
-                update + ";\n" +
-                "\n" +
-                ":: else -> break\n" +
-                "od\n" +
-                exitLoopLabel + ": skip;\n";
+
+        StringBuilder result = new StringBuilder();
+
+        if (!init.isEmpty()) {
+            result.append(init).append(";\n");
+        }
+
+        result.append("do\n");
+
+        result.append(":: (").append(cond).append(") ->\n");
+        result.append(inLoopLabel).append(": skip;\n");
+
+        result.append(body);
+
+        result.append(updateLabel).append(": skip;\n");
+
+        if (!update.isEmpty()) {
+            result.append("    ").append(update).append(";\n");
+        }
+        result.append(":: else -> break\n");
+        result.append("od\n");
+
+        result.append(exitLoopLabel).append(": skip;\n");
+
+        return result.toString();
     }
 
     @Override
@@ -538,7 +561,6 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
                 .append(") ->\n");
 
         int nextStmt = stmtIndex;
-
 
         int branchEnd = Integer.MAX_VALUE;
 

@@ -5,26 +5,22 @@ import java.io.IOException;
 
 public class Main {
     public static void main(String[] args) {
-        // ۱. نام فایل ورودی (مثلاً input.hash)
+
         String inputFile = "C:\\Users\\XMART\\IdeaProjects\\modelcheking\\src\\input";
+        String test="C:\\Users\\XMART\\IdeaProjects\\modelcheking\\src\\test\\test6.txt";
         String outputFile = "output.pml";
 
         try {
-            // ۲. خواندن فایل و ایجاد جریان کاراکتر
-            CharStream input = CharStreams.fromFileName(inputFile);
 
-            // ۳. ایجاد لکسر (Lexer)
+            CharStream input = CharStreams.fromFileName(test);
+
             HashLexer lexer = new HashLexer(input);
             CommonTokenStream tokens = new CommonTokenStream(lexer);
 
-            // ۴. ایجاد پارسر (Parser)
             HashParser parser = new HashParser(tokens);
 
-            // ۵. شروع پارس کردن از قاعده اصلی (program)
             ParseTree tree = parser.program();
 
-
-            // ۶. اگر خطای سینتکسی وجود داشت، ادامه ندهیم
             if (parser.getNumberOfSyntaxErrors() > 0) {
                 System.err.println("❌ خطای نحوی (Syntax Error) در کد ورودی پیدا شد.");
                 return;
