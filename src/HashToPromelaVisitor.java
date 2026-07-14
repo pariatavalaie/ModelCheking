@@ -11,34 +11,43 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
     private StringBuilder declarations = new StringBuilder();
     private StringBuilder mainProcess = new StringBuilder();
     StringBuilder currentStmtPrefix = new StringBuilder();
+    private boolean powerUsed = false;
 
     @Override
     public String visitProgram(HashParser.ProgramContext ctx) {
 
-        StringBuilder result = new StringBuilder();
-
-        // inline power
-        result.append(
-                "inline power(base, exp, result) {\n" +
-                        "    int q;\n" +
-                        "    result = 1;\n" +
-                        "    q = 0;\n" +
-                        "\n" +
-                        "    do\n" +
-                        "    :: (q < exp) ->\n" +
-                        "        result = result * base;\n" +
-                        "        q++\n" +
-                        "    :: else -> break\n" +
-                        "    od\n" +
-                        "}\n\n"
-        );
-        result.append("bool divByZero = false;\n");
-        result.append("bool endReached = false;\n");
+        StringBuilder programBody = new StringBuilder();
 
         for (var d : ctx.topLevelDecl()) {
-            result.append(visit(d));
+            String translated = visit(d);
+
+            if (translated != null) {
+                programBody.append(translated);
+            }
         }
 
+        StringBuilder result = new StringBuilder();
+
+        if (powerUsed) {
+            result.append(
+                    "inline power(base, exp, result) {\n" +
+                            "    int q;\n" +
+                            "    result = 1;\n" +
+                            "    q = 0;\n" +
+                            "\n" +
+                            "    do\n" +
+                            "    :: (q < exp) ->\n" +
+                            "        result = result * base;\n" +
+                            "        q++\n" +
+                            "    :: else -> break\n" +
+                            "    od\n" +
+                            "}\n\n"
+            );
+        }
+
+        result.append("bool divByZero = false;\n");
+        result.append("bool endReached = false;\n\n");
+        result.append(programBody);
         result.append(
                 "init {\n" +
                         "    run main();\n" +
@@ -47,7 +56,6 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
 
         return result.toString();
     }
-
 
 
 
@@ -261,7 +269,7 @@ public class HashToPromelaVisitor extends HashBaseVisitor<String> {
         String right = visit(ctx.power());
 
         String tmp = "tmp" + (tempCounter++);
-
+        powerUsed=true;
         declarations.append("int ").append(tmp).append(";\n");
 
         mainProcess.append(

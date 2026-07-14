@@ -13,6 +13,7 @@ inline power(base, exp, result) {
 
 bool divByZero = false;
 bool endReached = false;
+
 int x = 10;
 proctype main() {
 int tmp_div_0;
